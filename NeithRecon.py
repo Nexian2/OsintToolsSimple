@@ -1,108 +1,19 @@
-import requests
-import whois
-import dns.resolver
-import phonenumbers
-import sys
+import requests, socket, json, hashlib
+from phonenumbers import parse, geocoder
+import os, sys
 
 BANNER = """
-███████╗███╗   ██╗███████╗██╗████████╗██╗  ██╗
-██╔════╝████╗  ██║██╔════╝██║╚══██╔══╝██║  ██║
-█████╗  ██╔██╗ ██║█████╗  ██║   ██║   ███████║
-██╔══╝  ██║╚██╗██║██╔══╝  ██║   ██║   ██╔══██║
-███████╗██║ ╚████║███████╗██║   ██║   ██║  ██║
-╚══════╝╚═╝  ╚═══╝╚══════╝╚═╝   ╚═╝   ╚═╝  ╚═╝
-        OSINT & VULN Toolkit - By Nolan
+\033[92m
+███╗   ██╗███████╗██╗████████╗██╗  ██╗
+████╗  ██║██╔════╝██║╚══██╔══╝██║  ██║
+██╔██╗ ██║█████╗  ██║   ██║   ███████║
+██║╚██╗██║██╔══╝  ██║   ██║   ██╔══██║
+██║ ╚████║███████╗██║   ██║   ██║  ██║
+╚═╝  ╚═══╝╚══════╝╚═╝   ╚═╝   ╚═╝  ╚═╝
+\033[97mOSINT & VULN Toolkit - By Nolan
 """
 
-def banner():
-    print(BANNER)
-
-def whois_lookup(domain):
-    print("[*] WHOIS Lookup:")
-    try:
-        w = whois.whois(domain)
-        print(w)
-    except Exception as e:
-        print("Error:", e)
-
-def dns_lookup(domain):
-    print("[*] DNS Records:")
-    try:
-        for qtype in ['A', 'MX', 'NS']:
-            answers = dns.resolver.resolve(domain, qtype)
-            print(f"{qtype} Records:")
-            for r in answers:
-                print(f"  {r}")
-    except Exception as e:
-        print("Error:", e)
-
-def ip_geolocation(ip):
-    try:
-        r = requests.get(f"http://ip-api.com/json/{ip}")
-        data = r.json()
-        for key, value in data.items():
-            print(f"{key.title()}: {value}")
-    except:
-        print("Gagal ambil data lokasi")
-
-def phone_lookup(number):
-    try:
-        parsed = phonenumbers.parse(number)
-        print(f"Region: {phonenumbers.region_code_for_number(parsed)}")
-        print(f"Carrier: {phonenumbers.carrier.name_for_number(parsed, 'en')}")
-        print(f"Valid: {phonenumbers.is_valid_number(parsed)}")
-    except:
-        print("Nomor tidak valid")
-
-def subdomain_enum(domain):
-    print("[*] Subdomain Enumeration:")
-    subdomains = ['www', 'mail', 'ftp', 'test', 'dev']
-    for sub in subdomains:
-        url = f"http://{sub}.{domain}"
-        try:
-            r = requests.get(url, timeout=3)
-            if r.status_code < 400:
-                print(f"[+] Found: {url}")
-        except:
-            pass
-
-def port_scanner(ip):
-    import socket
-    print("[*] Port Scanner (Top 100 ports):")
-    common_ports = [21, 22, 23, 25, 53, 80, 110, 443, 445, 3306]
-    for port in common_ports:
-        try:
-            sock = socket.socket()
-            sock.settimeout(0.5)
-            result = sock.connect_ex((ip, port))
-            if result == 0:
-                print(f"[+] Port {port} terbuka")
-            sock.close()
-        except:
-            pass
-
-def vuln_scanner(url):
-    print("[*] Basic Vulnerability Scanner")
-    try:
-        r = requests.get(url)
-        if "wp-content" in r.text:
-            print("[!] WordPress terdeteksi!")
-        elif "joomla" in r.text.lower():
-            print("[!] Joomla terdeteksi!")
-        else:
-            print("[-] CMS tidak terdeteksi.")
-
-        headers = r.headers
-        print("\n[*] HTTP Header Check:")
-        for h in ['Server', 'X-Powered-By']:
-            if h in headers:
-                print(f"{h}: {headers[h]}")
-    except:
-        print("Gagal cek target")
-
-def menu():
-    banner()
-    print("""
+MENU = """
 [1] WHOIS Lookup
 [2] DNS Lookup
 [3] IP Geolocation
@@ -110,28 +21,113 @@ def menu():
 [5] Subdomain Enumeration
 [6] Port Scanner
 [7] Vulnerability Scanner
-[0] Keluar
-""")
-    ch = input("Pilih menu: ")
-    if ch == "1":
-        whois_lookup(input("Domain: "))
-    elif ch == "2":
-        dns_lookup(input("Domain: "))
-    elif ch == "3":
-        ip_geolocation(input("IP: "))
-    elif ch == "4":
-        phone_lookup(input("Nomor (+62...): "))
-    elif ch == "5":
-        subdomain_enum(input("Domain: "))
-    elif ch == "6":
-        port_scanner(input("IP Target: "))
-    elif ch == "7":
-        vuln_scanner(input("URL: "))
-    elif ch == "0":
-        exit()
-    else:
-        print("Pilihan salah.")
-    input("\nTekan Enter untuk kembali...")
-    menu()
+[8] SQL Injection & XSS Scanner
+[9] Malware Identification (Hash)
+[0] Exit
+"""
 
-menu()
+def whois_lookup(domain):
+    res = requests.get(f"https://api.hackertarget.com/whois/?q={domain}")
+    print(res.text)
+
+def dns_lookup(domain):
+    res = requests.get(f"https://api.hackertarget.com/dnslookup/?q={domain}")
+    print(res.text)
+
+def ip_geo(ip):
+    res = requests.get(f"http://ip-api.com/json/{ip}")
+    data = res.json()
+    for k, v in data.items():
+        print(f"{k.capitalize()}: {v}")
+
+def phone_osint(number):
+    p = parse(number)
+    print("Lokasi:", geocoder.description_for_number(p, "en"))
+
+def subdomain_enum(domain):
+    print("[*] Subdomain scan (passive)...")
+    try:
+        res = requests.get(f"https://api.hackertarget.com/hostsearch/?q={domain}")
+        print(res.text)
+    except:
+        print("Gagal ambil subdomain")
+
+def port_scan(host):
+    print("[*] Scanning port (1-1024)...")
+    for port in range(1, 1025):
+        try:
+            s = socket.socket()
+            s.settimeout(0.3)
+            s.connect((host, port))
+            print(f"[+] Port terbuka: {port}")
+            s.close()
+        except:
+            pass
+
+def vuln_scan(domain):
+    print("[*] Scanning known vulns (passive)...")
+    res = requests.get(f"https://api.hackertarget.com/page-link-extractor/?q={domain}")
+    links = res.text.splitlines()
+    for link in links:
+        if any(x in link.lower() for x in ['id=', 'page=', 'php?']):
+            print(f"[!] Potensi input param: {link}")
+
+def sqli_xss_scanner(url):
+    print("[*] Testing SQLi & XSS injection...")
+    test_payloads = {
+        "SQLi": "' OR '1'='1",
+        "XSS": "<script>alert(1)</script>"
+    }
+    for label, payload in test_payloads.items():
+        test_url = f"{url}{payload}"
+        res = requests.get(test_url)
+        if payload in res.text:
+            print(f"[!!] Vulnerable to {label}: {test_url}")
+        else:
+            print(f"[-] Not vulnerable to {label}")
+
+def malware_check(hash_val):
+    print("[*] Checking hash on VirusTotal (public API)")
+    api = "https://www.virustotal.com/api/v3/files/"
+    headers = {
+        "x-apikey": "YOUR_API_KEY"  # replace with your API key
+    }
+    r = requests.get(api + hash_val, headers=headers)
+    if r.status_code == 200:
+        data = r.json()
+        stats = data["data"]["attributes"]["last_analysis_stats"]
+        print("Malware Stats:", stats)
+    else:
+        print("Hash not found or API error")
+
+def main():
+    os.system("clear")
+    print(BANNER)
+    while True:
+        print(MENU)
+        choice = input("Pilih menu: ")
+        if choice == "1":
+            whois_lookup(input("Domain: "))
+        elif choice == "2":
+            dns_lookup(input("Domain: "))
+        elif choice == "3":
+            ip_geo(input("IP: "))
+        elif choice == "4":
+            phone_osint(input("Nomor (e.g. +6281xxx): "))
+        elif choice == "5":
+            subdomain_enum(input("Domain: "))
+        elif choice == "6":
+            port_scan(input("Host: "))
+        elif choice == "7":
+            vuln_scan(input("Domain: "))
+        elif choice == "8":
+            sqli_xss_scanner(input("URL: "))
+        elif choice == "9":
+            malware_check(input("File SHA256: "))
+        elif choice == "0":
+            break
+        else:
+            print("Pilih yang bener, bre!")
+
+if __name__ == "__main__":
+    main()
