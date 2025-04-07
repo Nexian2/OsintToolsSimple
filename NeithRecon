@@ -1,0 +1,84 @@
+import requests
+import socket
+import whois
+import json
+import os
+
+def banner():
+    os.system('clear')
+    print("""
+\033[1;32m
+███╗   ██╗███████╗██╗████████╗██╗  ██╗██████╗ ███████╗ ██████╗ ███╗   ██╗
+████╗  ██║██╔════╝██║╚══██╔══╝██║  ██║██╔══██╗██╔════╝██╔═══██╗████╗  ██║
+██╔██╗ ██║█████╗  ██║   ██║   ███████║██████╔╝█████╗  ██║   ██║██╔██╗ ██║
+██║╚██╗██║██╔══╝  ██║   ██║   ██╔══██║██╔═══╝ ██╔══╝  ██║   ██║██║╚██╗██║
+██║ ╚████║███████╗██║   ██║   ██║  ██║██║     ███████╗╚██████╔╝██║ ╚████║
+╚═╝  ╚═══╝╚══════╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚══════╝ ╚═════╝ ╚═╝  ╚═══╝
+\033[0m
+              Powerful OSINT + Recon Tool | By Suki x Bre
+    """)
+
+def ip_lookup(ip):
+    print(f"\n[+] Lookup IP: {ip}")
+    try:
+        r = requests.get(f"https://ipinfo.io/{ip}/json").json()
+        for key in r:
+            print(f"{key.capitalize():<12}: {r[key]}")
+    except Exception as e:
+        print("Gagal ambil info IP:", e)
+
+def port_scan(host):
+    print(f"\n[+] Scanning Ports on {host}")
+    for port in [21,22,23,25,53,80,110,139,143,443,445,3389]:
+        try:
+            sock = socket.socket()
+            sock.settimeout(0.5)
+            sock.connect((host, port))
+            print(f"[*] Port {port} OPEN")
+            sock.close()
+        except:
+            pass
+
+def whois_lookup(domain):
+    print(f"\n[+] WHOIS Lookup: {domain}")
+    try:
+        w = whois.whois(domain)
+        print(w)
+    except Exception as e:
+        print("Gagal WHOIS:", e)
+
+def dns_record(domain):
+    print(f"\n[+] DNS Records for: {domain}")
+    try:
+        res = socket.gethostbyname_ex(domain)
+        print("DNS Result:", res)
+    except Exception as e:
+        print("DNS Error:", e)
+
+def main():
+    banner()
+    print("1. IP Info")
+    print("2. Port Scan")
+    print("3. WHOIS")
+    print("4. DNS Record")
+    print("5. Exit")
+    
+    choice = input("\nPilih opsi > ")
+    
+    if choice == '1':
+        ip = input("IP target: ")
+        ip_lookup(ip)
+    elif choice == '2':
+        host = input("Host/IP target: ")
+        port_scan(host)
+    elif choice == '3':
+        domain = input("Domain target: ")
+        whois_lookup(domain)
+    elif choice == '4':
+        domain = input("Domain target: ")
+        dns_record(domain)
+    else:
+        print("Exit...")
+
+if __name__ == "__main__":
+    main()
