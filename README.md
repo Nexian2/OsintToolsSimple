@@ -14,4 +14,4 @@ OSINT Toolkit & Vulnerability Scanner all-in-one with display cyber CLi
 ## How to Use:
 ```bash
 pip install -r requirements. txt
-python neithrecon.py 
+python NeithRecon.py 
