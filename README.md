@@ -19,5 +19,6 @@ A simple and powerful OSINT & Vulnerability Scanner CLI tool written in Python.
 ## Installation
 ```bash
 git clone https://github.com/yourusername/neithhunter.git
-cd NeithHunter
+cd OsintToolsSimple
 pip install -r requirements.txt
+python3 NeithRecon.py
