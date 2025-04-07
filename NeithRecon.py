@@ -17,12 +17,12 @@ MENU = """
 [1] WHOIS Lookup
 [2] DNS Lookup
 [3] IP Geolocation
-[4] Phone OSINT
+[4] Phone Number OSINT
 [5] Subdomain Enumeration
 [6] Port Scanner
 [7] Vulnerability Scanner
 [8] SQL Injection & XSS Scanner
-[9] Malware Identification (Hash)
+[9] Malware Detection (Hash)
 [0] Exit
 """
 
@@ -42,38 +42,38 @@ def ip_geo(ip):
 
 def phone_osint(number):
     p = parse(number)
-    print("Lokasi:", geocoder.description_for_number(p, "en"))
+    print("Location:", geocoder.description_for_number(p, "en"))
 
 def subdomain_enum(domain):
-    print("[*] Subdomain scan (passive)...")
+    print("[*] Scanning subdomains (passive)...")
     try:
         res = requests.get(f"https://api.hackertarget.com/hostsearch/?q={domain}")
         print(res.text)
     except:
-        print("Gagal ambil subdomain")
+        print("Failed to fetch subdomains")
 
 def port_scan(host):
-    print("[*] Scanning port (1-1024)...")
+    print("[*] Scanning ports (1-1024)...")
     for port in range(1, 1025):
         try:
             s = socket.socket()
             s.settimeout(0.3)
             s.connect((host, port))
-            print(f"[+] Port terbuka: {port}")
+            print(f"[+] Open port: {port}")
             s.close()
         except:
             pass
 
 def vuln_scan(domain):
-    print("[*] Scanning known vulns (passive)...")
+    print("[*] Scanning for known vulnerabilities (passive)...")
     res = requests.get(f"https://api.hackertarget.com/page-link-extractor/?q={domain}")
     links = res.text.splitlines()
     for link in links:
         if any(x in link.lower() for x in ['id=', 'page=', 'php?']):
-            print(f"[!] Potensi input param: {link}")
+            print(f"[!] Potential vulnerable parameter: {link}")
 
 def sqli_xss_scanner(url):
-    print("[*] Testing SQLi & XSS injection...")
+    print("[*] Testing for SQL Injection & XSS...")
     test_payloads = {
         "SQLi": "' OR '1'='1",
         "XSS": "<script>alert(1)</script>"
@@ -87,10 +87,10 @@ def sqli_xss_scanner(url):
             print(f"[-] Not vulnerable to {label}")
 
 def malware_check(hash_val):
-    print("[*] Checking hash on VirusTotal (public API)")
+    print("[*] Checking hash via VirusTotal (public API)")
     api = "https://www.virustotal.com/api/v3/files/"
     headers = {
-        "x-apikey": "YOUR_API_KEY"  # replace with your API key
+        "x-apikey": "YOUR_API_KEY"  # replace with your real API key
     }
     r = requests.get(api + hash_val, headers=headers)
     if r.status_code == 200:
@@ -101,33 +101,33 @@ def malware_check(hash_val):
         print("Hash not found or API error")
 
 def main():
-    os.system("clear")
+    os.system("clear" if os.name != "nt" else "cls")
     print(BANNER)
     while True:
         print(MENU)
-        choice = input("Pilih menu: ")
+        choice = input("Choose an option: ")
         if choice == "1":
-            whois_lookup(input("Domain: "))
+            whois_lookup(input("Enter domain: "))
         elif choice == "2":
-            dns_lookup(input("Domain: "))
+            dns_lookup(input("Enter domain: "))
         elif choice == "3":
-            ip_geo(input("IP: "))
+            ip_geo(input("Enter IP address: "))
         elif choice == "4":
-            phone_osint(input("Nomor (e.g. +6281xxx): "))
+            phone_osint(input("Phone number (e.g. +6281xxx): "))
         elif choice == "5":
-            subdomain_enum(input("Domain: "))
+            subdomain_enum(input("Enter domain: "))
         elif choice == "6":
-            port_scan(input("Host: "))
+            port_scan(input("Enter host: "))
         elif choice == "7":
-            vuln_scan(input("Domain: "))
+            vuln_scan(input("Enter domain: "))
         elif choice == "8":
-            sqli_xss_scanner(input("URL: "))
+            sqli_xss_scanner(input("Enter target URL: "))
         elif choice == "9":
-            malware_check(input("File SHA256: "))
+            malware_check(input("Enter SHA256 hash: "))
         elif choice == "0":
             break
         else:
-            print("Pilih yang bener, bre!")
+            print("Invalid option, try again!")
 
 if __name__ == "__main__":
     main()
